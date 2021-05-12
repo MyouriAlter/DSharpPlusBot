@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Text;
-using System.Threading.Tasks;
-using DSharpPlus;
 using DSharpPlusBot.Client;
 
 namespace DSharpPlusBot

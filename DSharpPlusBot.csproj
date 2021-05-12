@@ -16,7 +16,15 @@
     </ItemGroup>
 
     <ItemGroup>
-      <Folder Include="Extension" />
+      <Compile Remove="BotDatabase\**" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <EmbeddedResource Remove="BotDatabase\**" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <None Remove="BotDatabase\**" />
     </ItemGroup>
 
 </Project>

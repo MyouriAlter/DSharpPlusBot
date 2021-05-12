@@ -8,7 +8,7 @@ namespace DSharpPlusBot.Utilities
 {
     public class BotUtilities
     {
-        private static readonly Random Random = new Random();
+        private static readonly Random Random = new();
 
         [DllImport("kernel32.dll")]
         [return: MarshalAs(UnmanagedType.Bool)]
@@ -46,7 +46,7 @@ namespace DSharpPlusBot.Utilities
             var ramValue = memCounter.NextValue();
             return ramValue;
         }
-        
+
         public static string GetRandomAlphaNumeric(int length)
         {
             const string chars = "abcdefghijklmnopqrstuvwxyz0123456789";
@@ -57,6 +57,5 @@ namespace DSharpPlusBot.Utilities
         {
             return Random.Next(1, 255);
         }
-        
     }
 }

@@ -20,33 +20,33 @@ namespace DSharpPlusBot.Client
 {
     public class OliviaClient
     {
-        private DiscordShardedClient _shardedClient;
-
-        private IReadOnlyDictionary<int, CommandsNextExtension> _commands;
-
-        public InteractivityExtension _interactivityExtension;
-
         private CancellationTokenSource _cancellationTokenSource;
+        private DiscordShardedClient ShardedClient { get; set; }
 
+        private IReadOnlyDictionary<int, CommandsNextExtension> Commands { get; set; }
+
+        private IReadOnlyDictionary<int, InteractivityExtension> InteractivityExtension { get; set; }
 
         public async Task RunClientAsync()
         {
-
             #region json.config
+
             string json;
 
             await using (var fs = File.OpenRead("config.json"))
             using (var sr = new StreamReader(fs, new UTF8Encoding(false)))
+            {
                 json = await sr.ReadToEndAsync().ConfigureAwait(false);
+            }
 
             var configJson = JsonConvert.DeserializeObject<ConfigJson>(json);
-            
+
             #endregion
 
-            this._cancellationTokenSource = new CancellationTokenSource();
+            _cancellationTokenSource = new CancellationTokenSource();
 
             #region Initializations
-            
+
             var config = new DiscordConfiguration
             {
                 Token = configJson.Token,
@@ -54,48 +54,55 @@ namespace DSharpPlusBot.Client
                 AutoReconnect = true,
                 MinimumLogLevel = LogLevel.Debug,
                 AlwaysCacheMembers = true,
-                MessageCacheSize = 1337,
+                MessageCacheSize = 1337
             };
 
-            this._shardedClient = 
-               new DiscordShardedClient(
-               new DiscordConfiguration(config));
+            ShardedClient =
+                new DiscordShardedClient(
+                    new DiscordConfiguration(config));
 
             #endregion
-            
+
             #region interactive register
 
-            await this._shardedClient.UseInteractivityAsync(new InteractivityConfiguration
+            var interactiveConfig = new InteractivityConfiguration
             {
                 Timeout = TimeSpan.FromMinutes(2),
                 PaginationDeletion = PaginationDeletion.DeleteEmojis,
                 PaginationBehaviour = PaginationBehaviour.WrapAround
-            }).ConfigureAwait(false);
+            };
+
+            InteractivityExtension = await ShardedClient.UseInteractivityAsync(interactiveConfig);
+
+            //this._interactivityExtension = await this.ShardedClient.UseInteractivityAsync(interactiveConfig);
 
             #endregion
-           
+
             #region commandConfig
+
+            var service = new ServiceCollection();
 
             var commandConfig = new CommandsNextConfiguration
             {
-                StringPrefixes = new string[] {configJson.Prefix},
+                StringPrefixes = new[] {configJson.Prefix},
                 CaseSensitive = false,
                 DmHelp = true,
                 EnableDms = true,
                 EnableDefaultHelp = true,
                 EnableMentionPrefix = true,
                 IgnoreExtraArguments = true,
-                Services = new ServiceCollection()
-                    .AddSingleton(this)
+                Services = service
+                    .AddSingleton(ShardedClient)
                     .BuildServiceProvider()
             };
-            
-            _commands = await this._shardedClient.UseCommandsNextAsync(commandConfig);
+
+            Commands = await ShardedClient.UseCommandsNextAsync(commandConfig);
+
             #endregion
 
             #region command register module
 
-            foreach (var cmd in _commands.Values)
+            foreach (var cmd in Commands.Values)
             {
                 cmd.RegisterCommands<General>();
                 cmd.RegisterCommands<Moderation>();
@@ -103,30 +110,28 @@ namespace DSharpPlusBot.Client
 
             #endregion
 
-            
             #region start up the bot
-            
-            await this._shardedClient.StartAsync();
+
+            await ShardedClient.StartAsync();
 
             await Task.Delay(-1);
 
             #endregion
-            
+
             #region Client event
 
-            _shardedClient.Ready += ShardedClientOnReady;
+            ShardedClient.Ready += ShardedClientOnReady;
 
             #endregion
 
-           
+
             #region shut down
 
-            while (!this._cancellationTokenSource.IsCancellationRequested) 
+            while (!_cancellationTokenSource.IsCancellationRequested)
                 await Task.Delay(2000);
-            await this._shardedClient.StopAsync();
+            await ShardedClient.StopAsync();
 
             #endregion
-
         }
 
         private static Task ShardedClientOnReady(DiscordClient sender, ReadyEventArgs e)
